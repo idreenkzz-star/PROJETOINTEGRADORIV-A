@@ -14,7 +14,7 @@ interface MesaContextType {
   mesas: Mesa[];
   adicionarMesa: (numero: string) => void;
   removerMesa: (id: string) => void;
-  atualizarMesaStatus: (id: string, status: 'vaga' | 'aguardando' | 'atendido', cliente?: string, pedido?: string) => void;
+  atualizarMesaStatus: (id: string, status: 'vaga' | 'aguardando' | 'atendido', cliente?: string, pedidoAtual?: string) => void;
 }
 
 const MesaContext = createContext<MesaContextType | undefined>(undefined);
