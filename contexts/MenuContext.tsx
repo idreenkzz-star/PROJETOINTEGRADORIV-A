@@ -22,6 +22,13 @@ interface MenuContextType {
 
   reload: () => Promise<void>;
 }
+  export interface Mesa {
+    id: string; // ex: "01"
+    numero: string; // ex: "Mesa 01"
+    status: 'vaga' | 'aguardando' | 'atendido'; // azul, amarelo, verde
+    cliente?: string;
+    idPedido?: string; // Para vincular com a aba order
+  }
 
 // Criação do contexto
 const MenuContext = createContext<MenuContextType | undefined>(undefined);
