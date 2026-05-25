@@ -24,12 +24,18 @@ export default function StatusMesaScreen() {
   };
 
   // Retorna a cor de fundo baseado no status atual da comanda
-  const getCorStatus = (status: Mesa['status']) => {
+  const getCorStatus = (status: any) => {
     switch (status) {
-      case 'vaga': return '#2196F3';       // Azul uniforme
-      case 'aguardando': return '#FFC107'; // Amarelo de atenção
-      case 'atendido': return '#4CAF50';   // Verde de sucesso
-      default: return '#2196F3';
+      case 'vaga':
+        return '#2196F3'; // Azul uniforme
+      case 'aguardando':
+        return '#FFC107'; // Amarelo de atenção
+      case 'preparando':
+        return '#FF9F43'; // Laranja (Chef cozinhando)
+      case 'atendido':
+        return '#4CAF50'; // Verde de sucesso
+      default:
+        return '#2196F3';
     }
   };
 

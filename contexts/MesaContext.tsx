@@ -1,15 +1,15 @@
 import React, { createContext, useState, useContext, ReactNode } from 'react';
 
-// 1. Definição do Tipo de Dados de uma Mesa
+//  Definição do Tipo de Dados de uma Mesa
 export interface Mesa {
   id: string;
   numero: string;
-  status: 'vaga' | 'aguardando' | 'atendido'; // azul, amarelo, verde
+  status: 'vaga' | 'aguardando' | 'preparando' | 'atendido'; // azul, amarelo, laranja e verde.
   cliente?: string;
   pedidoAtual?: string;
 }
 
-// 2. Definição de tudo que o contexto vai exportar para as telas usarem
+// Definição de tudo que o contexto vai exportar para as telas usarem
 interface MesaContextType {
   mesas: Mesa[];
   adicionarMesa: (numero: string) => void;

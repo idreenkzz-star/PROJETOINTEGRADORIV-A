@@ -22,21 +22,30 @@ export default function RestaurantScreen() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
-    orders.forEach((order) => {
-      // Se o pedido não estiver mais pendente (ou seja, foi finalizado/atendido pelo chef)
-      if (order.status !== 'pending') {
-        // Busca se existe alguma mesa associada aguardando por esse cliente específico
-        const mesaDoCliente = mesas.find(
-          (m) => m.cliente === order.customerName && m.status === 'aguardando'
-        );
+    orders.forEach((order: any) => {
+      // Busca a mesa associada a este cliente
+      const mesaDoCliente = mesas.find((m: any) => m.cliente === order.customerName);
 
-        // Se encontrar, atualiza o status gráfico dela para 'atendido' (Verde)
-        if (mesaDoCliente) {
+      if (mesaDoCliente) {
+        // Criamos uma referência temporária tipada como 'any' para ignorar restrições rígidas de propriedades
+        const mesaDados = mesaDoCliente as any;
+
+        // Se o chef aceitou o pedido e está a cozinhar -> Muda para Laranja
+        if (order.status === 'preparing' && (mesaDoCliente.status as any) !== 'preparando') {
+          atualizarMesaStatus(
+            mesaDoCliente.id,
+            'preparando' as any,
+            mesaDoCliente.cliente || '',
+            mesaDados.pedido || mesaDados.pedidoAtual || []
+          );
+        }
+        // Se o chef finalizou o preparo -> Muda para Verde (Pronto / Consumindo)
+        else if (order.status === 'completed' && mesaDoCliente.status !== 'atendido') {
           atualizarMesaStatus(
             mesaDoCliente.id,
             'atendido',
-            mesaDoCliente.cliente,
-            mesaDoCliente.pedidoAtual
+            mesaDoCliente.cliente || '',
+            mesaDados.pedido || mesaDados.pedidoAtual || []
           );
         }
       }
