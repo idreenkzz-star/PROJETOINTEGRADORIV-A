@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -11,13 +11,37 @@ import {
 import { useRouter } from 'expo-router';
 import { Plus, Trash2 } from 'lucide-react-native';
 import { useMenu } from '@/contexts/MenuContext';
+import { useMesas } from '@/contexts/MesaContext';
 import { MenuItem } from '@/types/menu';
 
 export default function RestaurantScreen() {
   const router = useRouter();
   const { menuItems, removeMenuItem, orders } = useMenu();
+  const { mesas, atualizarMesaStatus } = useMesas();
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  useEffect(() => {
+    orders.forEach((order) => {
+      // Se o pedido não estiver mais pendente (ou seja, foi finalizado/atendido pelo chef)
+      if (order.status !== 'pending') {
+        // Busca se existe alguma mesa associada aguardando por esse cliente específico
+        const mesaDoCliente = mesas.find(
+          (m) => m.cliente === order.customerName && m.status === 'aguardando'
+        );
+
+        // Se encontrar, atualiza o status gráfico dela para 'atendido' (Verde)
+        if (mesaDoCliente) {
+          atualizarMesaStatus(
+            mesaDoCliente.id,
+            'atendido',
+            mesaDoCliente.cliente,
+            mesaDoCliente.pedidoAtual
+          );
+        }
+      }
+    });
+  }, [orders, mesas]);
 
   const handleRemoveItem = (id: string) => {
     console.log('🟢 handleRemoveItem chamado com ID:', id);
