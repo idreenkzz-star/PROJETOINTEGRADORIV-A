@@ -22,63 +22,101 @@ export default function RestaurantScreen() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
-    orders.forEach((order: any) => {
-      // Busca a mesa associada a este cliente
-      const mesaDoCliente = mesas.find((m: any) => m.cliente === order.customerName);
+    // Se não houver pedidos ou mesas, não há o que sincronizar
+    if (!orders || !mesas) return;
 
-      if (mesaDoCliente) {
-        // Criamos uma referência temporária tipada como 'any' para ignorar restrições rígidas de propriedades
-        const mesaDados = mesaDoCliente as any;
+    mesas.forEach((mesa) => {
+      // 1. Se a mesa não tem cliente, o status dela deve ser 'vaga' (Cinza)
+      if (!mesa.cliente || mesa.cliente.trim() === '') {
+        if (mesa.status !== 'vaga') {
+          atualizarMesaStatus(mesa.id, 'vaga' as any, '', (mesa as any).items || []);
+        }
+        return; // Pula para a próxima mesa
+      }
 
-        // Se o chef aceitou o pedido e está a cozinhar -> Muda para Laranja
-        if (order.status === 'preparing' && (mesaDoCliente.status as any) !== 'preparando') {
-          atualizarMesaStatus(
-            mesaDoCliente.id,
-            'preparando' as any,
-            mesaDoCliente.cliente || '',
-            mesaDados.pedido || mesaDados.pedidoAtual || []
-          );
-        }
-        // Se o chef finalizou o preparo -> Muda para Verde (Pronto / Consumindo)
-        else if (order.status === 'completed' && mesaDoCliente.status !== 'atendido') {
-          atualizarMesaStatus(
-            mesaDoCliente.id,
-            'atendido',
-            mesaDoCliente.cliente || '',
-            mesaDados.pedido || mesaDados.pedidoAtual || []
-          );
-        }
+      // Busca se existe algum pedido ativo para o cliente desta mesa
+      const pedidoDaMesa = orders.find(
+        (order) => order.customerName?.toLowerCase() === mesa.cliente?.toLowerCase()
+      );
+
+      // Se há um cliente mas nenhum pedido foi listado no sistema ainda, mantém ou inicia como vaga/disponível
+      if (!pedidoDaMesa) {
+        return;
+      }
+
+      const orderStatusFormatted = String(pedidoDaMesa.status).toLowerCase();
+      const mesaDados = mesa as any;
+      const itensSeguros = mesaDados.pedido || mesaDados.pedidoAtual || mesaDados.items || mesaDados.itens || [];
+
+      //  AMARELO: Pedido Criado ('pending')
+      if (orderStatusFormatted === 'pending' && mesa.status !== ('aguardando' as any)) {
+        // Usando o status existente do seu tipo (ex: 'aguardando') mapeado para a cor amarela
+        atualizarMesaStatus(mesa.id, 'aguardando' as any, mesa.cliente, itensSeguros);
+      }
+
+      // LARANJA: Pedido Fazendo / Em Preparação ('preparing')
+      else if (orderStatusFormatted === 'preparing' && mesa.status !== ('preparando' as any)) {
+        atualizarMesaStatus(mesa.id, 'preparando' as any, mesa.cliente, itensSeguros);
+      }
+
+      //  AZUL: Pedido Feito / Pronto para Entrega ('ready')
+      else if (orderStatusFormatted === 'ready' && mesa.status !== ('pronto' as any)) {
+        atualizarMesaStatus(mesa.id, 'pronto' as any, mesa.cliente, itensSeguros);
+      }
+
+      // VERDE: Cliente levou / Consumindo ('delivered')
+      else if (orderStatusFormatted === 'delivered' && mesa.status !== 'atendido') {
+        atualizarMesaStatus(mesa.id, 'atendido', mesa.cliente, itensSeguros);
       }
     });
   }, [orders, mesas]);
 
+  // Função auxiliar para renderizar a cor correta dos cards na tela baseado na etapa
+  const getCorStatusMesa = (status: string) => {
+    const statusLimpo = String(status).toLowerCase();
+    switch (statusLimpo) {
+      case 'vaga':
+        return '#7F8C8D'; // Cinza: Mesa vazia
+      case 'aguardando':
+        return '#fdd73d'; // Amarelo: Pedido criado
+      case 'preparando':
+        return '#b15703'; // Laranja: Em preparação
+      case 'pronto':
+        return '#3498DB'; // Azul: Pronto para entrega
+      case 'atendido':
+        return '#2ECC71'; // Verde: Consumindo / Entregue
+      default:
+        return '#7F8C8D'; // Fallback seguro (Cinza)
+    }
+  };
+
   const handleRemoveItem = (id: string) => {
-    console.log('🟢 handleRemoveItem chamado com ID:', id);
-    console.log('🟢 Tipo do ID:', typeof id);
-    
+    console.log(' handleRemoveItem chamado com ID:', id);
+    console.log(' Tipo do ID:', typeof id);
+
     // Abre o modal de confirmação
     setShowDeleteConfirm(true);
   };
 
   const confirmDelete = () => {
     if (!selectedItem) return;
-    
-    console.log('🟡 CONFIRMANDO DELETE do item:', selectedItem.id);
-    
+
+    console.log(' CONFIRMANDO DELETE do item:', selectedItem.id);
+
     // Chama a remoção
     removeMenuItem(selectedItem.id);
-    
+
     // Fecha os modais
     setShowDeleteConfirm(false);
-    
+
     setTimeout(() => {
-      console.log('🟡 Fechando modal principal...');
+      console.log(' Fechando modal principal...');
       setSelectedItem(null);
     }, 100);
   };
 
   const cancelDelete = () => {
-    console.log('🟡 DELETE CANCELADO');
+    console.log('DELETE CANCELADO');
     setShowDeleteConfirm(false);
   };
 
@@ -89,7 +127,7 @@ export default function RestaurantScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Gerenciar Cardápio</Text>
       </View>
-    
+
       <FlatList
         data={menuItems}
         keyExtractor={(item) => item.id}
@@ -191,14 +229,14 @@ export default function RestaurantScreen() {
             <Text style={styles.confirmMessage}>
               Tem certeza que deseja remover este item do cardápio?
             </Text>
-            
+
             <View style={styles.confirmButtons}>
               <TouchableOpacity
                 style={styles.cancelButton}
                 onPress={cancelDelete}>
                 <Text style={styles.cancelButtonText}>Cancelar</Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 style={styles.confirmButton}
                 onPress={confirmDelete}>
@@ -396,7 +434,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  
+
   // ⭐ ESTILOS DO MODAL DE CONFIRMAÇÃO ⭐
   confirmOverlay: {
     flex: 1,

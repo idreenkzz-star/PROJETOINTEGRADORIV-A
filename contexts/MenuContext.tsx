@@ -156,7 +156,7 @@ const removeMenuItem = (id: string) => {
       if (menuJson) setMenuItems(JSON.parse(menuJson));
       if (ordersJson) setOrders(JSON.parse(ordersJson));
     } catch (error) {
-      console.error("❌ Erro ao recarregar AsyncStorage:", error);
+      console.error("Erro ao recarregar AsyncStorage:", error);
     }
   };
 
@@ -181,7 +181,7 @@ const removeMenuItem = (id: string) => {
 export function useMenu(): MenuContextType {
   const context = useContext(MenuContext);
   if (!context) {
-    throw new Error("❌ useMenu deve ser usado dentro de <MenuProvider>");
+    throw new Error("useMenu deve ser usado dentro de <MenuProvider>");
   }
   return context;
 }
