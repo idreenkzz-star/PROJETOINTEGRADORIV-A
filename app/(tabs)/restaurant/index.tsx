@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -11,52 +11,128 @@ import {
 import { useRouter } from 'expo-router';
 import { Plus, Trash2 } from 'lucide-react-native';
 import { useMenu } from '@/contexts/MenuContext';
+import { useMesas } from '@/contexts/MesaContext';
 import { MenuItem } from '@/types/menu';
 
 export default function RestaurantScreen() {
   const router = useRouter();
   const { menuItems, removeMenuItem, orders } = useMenu();
+  const { mesas, atualizarMesaStatus } = useMesas();
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  useEffect(() => {
+    // Se não houver pedidos ou mesas, não há o que sincronizar
+    if (!orders || !mesas) return;
+
+    mesas.forEach((mesa) => {
+      // 1. Se a mesa não tem cliente, o status dela deve ser 'vaga' (Cinza)
+      if (!mesa.cliente || mesa.cliente.trim() === '') {
+        if (mesa.status !== 'vaga') {
+          atualizarMesaStatus(mesa.id, { status: 'vaga' });
+        }
+        return; // Pula para a próxima mesa
+      }
+
+      // Busca se existe algum pedido ativo para a mesa pelo vínculo direto do pedido
+      const pedidoDaMesa = mesa.pedidoId
+        ? orders.find((order) => order.id === mesa.pedidoId)
+        : orders.find(
+            (order) => order.customerName?.toLowerCase() === mesa.cliente?.toLowerCase()
+          );
+
+      // Se há um cliente mas nenhum pedido foi listado no sistema ainda, mantém ou inicia como vaga/disponível
+      if (!pedidoDaMesa) {
+        return;
+      }
+
+      const orderStatusFormatted = String(pedidoDaMesa.status).toLowerCase();
+      const itensSeguros = pedidoDaMesa.items
+        .map((item) => `${item.quantity}x ${item.menuItem.name}`)
+        .join(', ');
+
+      //  AMARELO: Pedido Criado ('pending')
+      if (orderStatusFormatted === 'pending' && mesa.status !== 'aguardando') {
+        atualizarMesaStatus(mesa.id, {
+          status: 'aguardando',
+          cliente: mesa.cliente || pedidoDaMesa.customerName,
+          pedidoAtual: itensSeguros,
+          pedidoId: pedidoDaMesa.id,
+          pessoas: mesa.pessoas,
+        });
+      }
+
+      // LARANJA: Pedido Fazendo / Em Preparação ('preparing')
+      else if (orderStatusFormatted === 'preparing' && mesa.status !== 'preparando') {
+        atualizarMesaStatus(mesa.id, {
+          status: 'preparando',
+          cliente: mesa.cliente || pedidoDaMesa.customerName,
+          pedidoAtual: itensSeguros,
+          pedidoId: pedidoDaMesa.id,
+          pessoas: mesa.pessoas,
+        });
+      }
+
+      //  AZUL: Pedido Feito / Pronto para Entrega ('ready')
+      else if (orderStatusFormatted === 'ready' && mesa.status !== 'pronto') {
+        atualizarMesaStatus(mesa.id, {
+          status: 'pronto',
+          cliente: mesa.cliente || pedidoDaMesa.customerName,
+          pedidoAtual: itensSeguros,
+          pedidoId: pedidoDaMesa.id,
+          pessoas: mesa.pessoas,
+        });
+      }
+
+      // VERDE: Cliente levou / Consumindo ('delivered')
+      else if (orderStatusFormatted === 'delivered' && mesa.status !== 'atendido') {
+        atualizarMesaStatus(mesa.id, {
+          status: 'atendido',
+          cliente: mesa.cliente || pedidoDaMesa.customerName,
+          pedidoAtual: itensSeguros,
+          pedidoId: pedidoDaMesa.id,
+          pessoas: mesa.pessoas,
+        });
+      }
+    });
+  }, [orders, mesas]);
+
   const handleRemoveItem = (id: string) => {
-    console.log('🟢 handleRemoveItem chamado com ID:', id);
-    console.log('🟢 Tipo do ID:', typeof id);
-    
+    console.log(' handleRemoveItem chamado com ID:', id);
+    console.log(' Tipo do ID:', typeof id);
+
     // Abre o modal de confirmação
     setShowDeleteConfirm(true);
   };
 
   const confirmDelete = () => {
     if (!selectedItem) return;
-    
-    console.log('🟡 CONFIRMANDO DELETE do item:', selectedItem.id);
-    
+
+    console.log(' CONFIRMANDO DELETE do item:', selectedItem.id);
+
     // Chama a remoção
     removeMenuItem(selectedItem.id);
-    
+
     // Fecha os modais
     setShowDeleteConfirm(false);
-    
+
     setTimeout(() => {
-      console.log('🟡 Fechando modal principal...');
+      console.log(' Fechando modal principal...');
       setSelectedItem(null);
     }, 100);
   };
 
   const cancelDelete = () => {
-    console.log('🟡 DELETE CANCELADO');
+    console.log('DELETE CANCELADO');
     setShowDeleteConfirm(false);
   };
-
-  const pendingOrders = orders.filter((order) => order.status === 'pending');
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Gerenciar Cardápio</Text>
       </View>
-    
+
       <FlatList
         data={menuItems}
         keyExtractor={(item) => item.id}
@@ -158,14 +234,14 @@ export default function RestaurantScreen() {
             <Text style={styles.confirmMessage}>
               Tem certeza que deseja remover este item do cardápio?
             </Text>
-            
+
             <View style={styles.confirmButtons}>
               <TouchableOpacity
                 style={styles.cancelButton}
                 onPress={cancelDelete}>
                 <Text style={styles.cancelButtonText}>Cancelar</Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 style={styles.confirmButton}
                 onPress={confirmDelete}>
@@ -363,7 +439,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  
+
   // ⭐ ESTILOS DO MODAL DE CONFIRMAÇÃO ⭐
   confirmOverlay: {
     flex: 1,

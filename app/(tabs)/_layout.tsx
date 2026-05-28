@@ -2,8 +2,8 @@ import { Tabs } from "expo-router";
 import {
   ShoppingBag,
   Utensils,
-  ClipboardList,
-} from "lucide-react-native";
+  ClipboardList, Users
+} from 'lucide-react-native';
 
 export default function TabsLayout() {
   
@@ -46,6 +46,16 @@ export default function TabsLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="Mesas"
+        options={{
+          title: "Status Mesa",
+          tabBarIcon: ({ color, size }) => (
+            <Users color={color} size={size} />
+          ),
+        }}
+      />
     </Tabs>
    );
+
 }

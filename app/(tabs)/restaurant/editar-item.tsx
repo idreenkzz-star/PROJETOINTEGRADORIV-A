@@ -13,7 +13,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useMenu } from "@/contexts/MenuContext";
 
-export default function EditItemScreen() {
+function EditItemScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const { menuItems, updateMenuItem } = useMenu();
@@ -32,7 +32,7 @@ export default function EditItemScreen() {
   const [description, setDescription] = useState(item.description);
   const [price, setPrice] = useState(String(item.price));
   const [category, setCategory] = useState(item.category);
-  const [image, setImage] = useState<string | null>(item.image);
+  const [image, setImage] = useState<string | null>(item.image ?? null);
 
   // Selecionar imagem da galeria
   const pickImage = async () => {
@@ -118,6 +118,8 @@ export default function EditItemScreen() {
     </ScrollView>
   );
 }
+
+export default EditItemScreen;
 
 const styles = StyleSheet.create({
   container: {

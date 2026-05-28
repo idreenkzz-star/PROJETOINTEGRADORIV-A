@@ -12,14 +12,19 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Plus, Minus, Trash2, CheckCircle } from 'lucide-react-native';
 import { useMenu } from '@/contexts/MenuContext';
+import { useMesas } from '@/contexts/MesaContext'; // 1. Importa o contexto das mesas
 import { OrderItem } from '@/types/menu';
 
 export default function CartScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { addOrder } = useMenu();
+  const { mesas, atualizarMesaStatus } = useMesas(); // 2. Puxa as ferramentas das mesas
+
   const [cart, setCart] = useState<OrderItem[]>([]);
   const [customerName, setCustomerName] = useState('');
+  const [peopleCount, setPeopleCount] = useState('1');
+  const [idMesaSelecionada, setIdMesaSelecionada] = useState<string>(''); // Controla qual mesa foi clicada
   const [orderPlaced, setOrderPlaced] = useState(false);
 
   useEffect(() => {
@@ -61,12 +66,37 @@ export default function CartScreen() {
       return;
     }
 
+    if (!idMesaSelecionada) {
+      Alert.alert('Atenção', 'Por favor, selecione uma mesa para este pedido');
+      return;
+    }
+
     if (cart.length === 0) {
       Alert.alert('Atenção', 'Seu carrinho está vazio');
       return;
     }
 
-    addOrder(cart, customerName.trim());
+    const quantidadePessoas = Number.parseInt(peopleCount, 10);
+
+    if (!Number.isFinite(quantidadePessoas) || quantidadePessoas <= 0) {
+      Alert.alert('Atenção', 'Informe a quantidade de pessoas para esta mesa');
+      return;
+    }
+
+    // Cria o resumo dos itens para jogar dentro do modal de status da mesa
+    const resumoItens = cart.map(item => `${item.quantity}x ${item.menuItem.name}`).join(', ');
+
+    // 3. Modifica o status da mesa para 'aguardando' (AMARELO) no clique
+    const orderId = addOrder(cart, customerName.trim());
+    atualizarMesaStatus(idMesaSelecionada, {
+      status: 'aguardando',
+      cliente: customerName.trim(),
+      pedidoAtual: resumoItens,
+      pedidoId: orderId,
+      pessoas: quantidadePessoas,
+    });
+
+    // Mantém a sua lógica padrão de persistência de pedidos
     setOrderPlaced(true);
 
     setTimeout(() => {
@@ -153,13 +183,56 @@ export default function CartScreen() {
           />
 
           <View style={styles.footer}>
+            {/* NOVO SELETOR GRÁFICO DE MESAS DISPONÍVEIS */}
             <View style={styles.nameInputContainer}>
-              <Text style={styles.nameLabel}>Cliente e Mesa:</Text>
+              <Text style={styles.nameLabel}>Selecione a Mesa:</Text>
+              <View style={styles.mesasSelectorRow}>
+                {mesas.map((m) => {
+                  const isSelected = idMesaSelecionada === m.id;
+                  const isOcupada = m.status !== 'vaga';
+                  return (
+                    <TouchableOpacity
+                      key={m.id}
+                      disabled={isOcupada}
+                      style={[
+                        styles.mesaBadge,
+                        isSelected && styles.mesaBadgeSelected,
+                        isOcupada && styles.mesaBadgeDisabled
+                      ]}
+                      onPress={() => setIdMesaSelecionada(m.id)}
+                    >
+                      <Text style={[
+                        styles.mesaBadgeText,
+                        isSelected && styles.mesaBadgeTextSelected,
+                        isOcupada && styles.mesaBadgeTextDisabled
+                      ]}>
+                        {m.numero.replace('Mesa ', '')}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={styles.nameInputContainer}>
+              <Text style={styles.nameLabel}>Nome do Cliente:</Text>
               <TextInput
                 style={styles.nameInput}
-                placeholder="Digite nome do cliente + N° da Mesa"
+                placeholder="Nome de identificação do cliente"
                 value={customerName}
                 onChangeText={setCustomerName}
+                placeholderTextColor="#999"
+              />
+            </View>
+
+            <View style={styles.nameInputContainer}>
+              <Text style={styles.nameLabel}>Quantidade de Pessoas:</Text>
+              <TextInput
+                style={styles.nameInput}
+                placeholder="Ex: 2"
+                value={peopleCount}
+                onChangeText={setPeopleCount}
+                keyboardType="number-pad"
                 placeholderTextColor="#999"
               />
             </View>
@@ -230,7 +303,7 @@ const styles = StyleSheet.create({
   },
   list: {
     padding: 16,
-    paddingBottom: 240,
+    paddingBottom: 280, // Aumentado um pouco para acomodar o seletor de mesas
   },
   cartCard: {
     backgroundColor: '#FFF',
@@ -310,7 +383,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   nameInputContainer: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   nameLabel: {
     fontSize: 14,
@@ -328,12 +401,45 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E0E0E0',
   },
+  mesasSelectorRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  mesaBadge: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#2196F3',
+    backgroundColor: '#E3F2FD',
+  },
+  mesaBadgeSelected: {
+    backgroundColor: '#2196F3',
+  },
+  mesaBadgeDisabled: {
+    borderColor: '#E0E0E0',
+    backgroundColor: '#F5F5F5',
+    opacity: 0.5,
+  },
+  mesaBadgeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2196F3',
+  },
+  mesaBadgeTextSelected: {
+    color: '#FFF',
+  },
+  mesaBadgeTextDisabled: {
+    color: '#999',
+    textDecorationLine: 'line-through',
+  },
   totalContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
-    paddingTop: 16,
+    marginBottom: 12,
+    paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: '#F0F0F0',
   },
