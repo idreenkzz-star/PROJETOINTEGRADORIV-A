@@ -17,18 +17,11 @@ interface MenuContextType {
   updateMenuItem: (id: string, updated: Partial<Omit<MenuItem, "id">>) => void;
   removeMenuItem: (id: string) => void;
 
-  addOrder: (items: OrderItem[], customerName: string) => void;
+  addOrder: (items: OrderItem[], customerName: string) => string;
   updateOrderStatus: (orderId: string, status: Order["status"]) => void;
 
   reload: () => Promise<void>;
 }
-  export interface Mesa {
-    id: string; // ex: "01"
-    numero: string; // ex: "Mesa 01"
-    status: 'vaga' | 'aguardando' | 'atendido'; // azul, amarelo, verde
-    cliente?: string;
-    idPedido?: string; // Para vincular com a aba order
-  }
 
 // Criação do contexto
 const MenuContext = createContext<MenuContextType | undefined>(undefined);
@@ -126,8 +119,9 @@ const removeMenuItem = (id: string) => {
       0
     );
 
+    const orderId = String(uuid.v4());
     const newOrder: Order = {
-      id: String(uuid.v4()),
+      id: orderId,
       items,
       total,
       status: "pending",
@@ -136,6 +130,7 @@ const removeMenuItem = (id: string) => {
     };
 
     setOrders((prev) => [newOrder, ...prev]);
+    return orderId;
   };
 
   // Atualizar status de pedido

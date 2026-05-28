@@ -1,12 +1,36 @@
-import React, { createContext, useState, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 //  Definição do Tipo de Dados de uma Mesa
+export type MesaStatus = 'vaga' | 'aguardando' | 'preparando' | 'pronto' | 'atendido';
+
 export interface Mesa {
   id: string;
   numero: string;
-  status: 'vaga' | 'aguardando' | 'preparando' | 'atendido'; // azul, amarelo, laranja e verde.
+  status: MesaStatus;
   cliente?: string;
   pedidoAtual?: string;
+  pedidoId?: string;
+  pessoas?: number;
+}
+
+export interface MesaUpdate {
+  status: MesaStatus;
+  cliente?: string;
+  pedidoAtual?: string;
+  pedidoId?: string;
+  pessoas?: number;
+}
+
+function criarMesasPadrao() {
+  return Array.from({ length: 12 }, (_, index) => {
+    const numero = String(index + 1).padStart(2, '0');
+
+    return {
+      id: numero,
+      numero: `Mesa ${numero}`,
+      status: 'vaga' as MesaStatus,
+    };
+  });
 }
 
 // Definição de tudo que o contexto vai exportar para as telas usarem
@@ -14,18 +38,14 @@ interface MesaContextType {
   mesas: Mesa[];
   adicionarMesa: (numero: string) => void;
   removerMesa: (id: string) => void;
-  atualizarMesaStatus: (id: string, status: 'vaga' | 'aguardando' | 'atendido', cliente?: string, pedidoAtual?: string) => void;
+  atualizarMesaStatus: (id: string, updates: MesaUpdate) => void;
 }
 
 const MesaContext = createContext<MesaContextType | undefined>(undefined);
 
 export function MesaProvider({ children }: { children: ReactNode }) {
   // Lista inicial simulada para vermos o layout funcionando imediatamente
-  const [mesas, setMesas] = useState<Mesa[]>([
-    { id: '1', numero: 'Mesa 01', status: 'vaga' },
-    { id: '2', numero: 'Mesa 02', status: 'aguardando', cliente: 'Lucas', pedidoAtual: 'Pizza e Refri' },
-    { id: '3', numero: 'Mesa 03', status: 'atendido', cliente: 'Douglas', pedidoAtual: 'Hambúrguer' },
-  ]);
+  const [mesas, setMesas] = useState<Mesa[]>(() => criarMesasPadrao());
 
   // Função para criar uma nova mesa usando o botão "+"
   const adicionarMesa = (numero: string) => {
@@ -43,9 +63,33 @@ export function MesaProvider({ children }: { children: ReactNode }) {
   };
 
   // Função que a aba Order vai disparar para mudar a cor da mesa
-  const atualizarMesaStatus = (id: string, status: 'vaga' | 'aguardando' | 'atendido', cliente?: string, pedido?: string) => {
+  const atualizarMesaStatus = (id: string, updates: MesaUpdate) => {
     setMesas((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, status, cliente, pedidoAtual: pedido } : m))
+      prev.map((mesa) => {
+        if (mesa.id !== id) {
+          return mesa;
+        }
+
+        if (updates.status === 'vaga') {
+          return {
+            ...mesa,
+            status: 'vaga',
+            cliente: undefined,
+            pedidoAtual: undefined,
+            pedidoId: undefined,
+            pessoas: undefined,
+          };
+        }
+
+        return {
+          ...mesa,
+          status: updates.status,
+          cliente: updates.cliente ?? mesa.cliente,
+          pedidoAtual: updates.pedidoAtual ?? mesa.pedidoAtual,
+          pedidoId: updates.pedidoId ?? mesa.pedidoId,
+          pessoas: updates.pessoas ?? mesa.pessoas,
+        };
+      })
     );
   };
 

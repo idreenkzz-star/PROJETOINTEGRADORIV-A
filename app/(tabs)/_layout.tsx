@@ -47,7 +47,7 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="status-mesa"
+        name="Mesas"
         options={{
           title: "Status Mesa",
           tabBarIcon: ({ color, size }) => (

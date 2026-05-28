@@ -23,6 +23,7 @@ export default function CartScreen() {
 
   const [cart, setCart] = useState<OrderItem[]>([]);
   const [customerName, setCustomerName] = useState('');
+  const [peopleCount, setPeopleCount] = useState('1');
   const [idMesaSelecionada, setIdMesaSelecionada] = useState<string>(''); // Controla qual mesa foi clicada
   const [orderPlaced, setOrderPlaced] = useState(false);
 
@@ -75,14 +76,27 @@ export default function CartScreen() {
       return;
     }
 
+    const quantidadePessoas = Number.parseInt(peopleCount, 10);
+
+    if (!Number.isFinite(quantidadePessoas) || quantidadePessoas <= 0) {
+      Alert.alert('Atenção', 'Informe a quantidade de pessoas para esta mesa');
+      return;
+    }
+
     // Cria o resumo dos itens para jogar dentro do modal de status da mesa
     const resumoItens = cart.map(item => `${item.quantity}x ${item.menuItem.name}`).join(', ');
 
     // 3. Modifica o status da mesa para 'aguardando' (AMARELO) no clique
-    atualizarMesaStatus(idMesaSelecionada, 'aguardando', customerName.trim(), resumoItens);
+    const orderId = addOrder(cart, customerName.trim());
+    atualizarMesaStatus(idMesaSelecionada, {
+      status: 'aguardando',
+      cliente: customerName.trim(),
+      pedidoAtual: resumoItens,
+      pedidoId: orderId,
+      pessoas: quantidadePessoas,
+    });
 
     // Mantém a sua lógica padrão de persistência de pedidos
-    addOrder(cart, customerName.trim());
     setOrderPlaced(true);
 
     setTimeout(() => {
@@ -207,6 +221,18 @@ export default function CartScreen() {
                 placeholder="Nome de identificação do cliente"
                 value={customerName}
                 onChangeText={setCustomerName}
+                placeholderTextColor="#999"
+              />
+            </View>
+
+            <View style={styles.nameInputContainer}>
+              <Text style={styles.nameLabel}>Quantidade de Pessoas:</Text>
+              <TextInput
+                style={styles.nameInput}
+                placeholder="Ex: 2"
+                value={peopleCount}
+                onChangeText={setPeopleCount}
+                keyboardType="number-pad"
                 placeholderTextColor="#999"
               />
             </View>

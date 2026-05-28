@@ -29,15 +29,17 @@ export default function RestaurantScreen() {
       // 1. Se a mesa não tem cliente, o status dela deve ser 'vaga' (Cinza)
       if (!mesa.cliente || mesa.cliente.trim() === '') {
         if (mesa.status !== 'vaga') {
-          atualizarMesaStatus(mesa.id, 'vaga' as any, '', (mesa as any).items || []);
+          atualizarMesaStatus(mesa.id, { status: 'vaga' });
         }
         return; // Pula para a próxima mesa
       }
 
-      // Busca se existe algum pedido ativo para o cliente desta mesa
-      const pedidoDaMesa = orders.find(
-        (order) => order.customerName?.toLowerCase() === mesa.cliente?.toLowerCase()
-      );
+      // Busca se existe algum pedido ativo para a mesa pelo vínculo direto do pedido
+      const pedidoDaMesa = mesa.pedidoId
+        ? orders.find((order) => order.id === mesa.pedidoId)
+        : orders.find(
+            (order) => order.customerName?.toLowerCase() === mesa.cliente?.toLowerCase()
+          );
 
       // Se há um cliente mas nenhum pedido foi listado no sistema ainda, mantém ou inicia como vaga/disponível
       if (!pedidoDaMesa) {
@@ -45,50 +47,55 @@ export default function RestaurantScreen() {
       }
 
       const orderStatusFormatted = String(pedidoDaMesa.status).toLowerCase();
-      const mesaDados = mesa as any;
-      const itensSeguros = mesaDados.pedido || mesaDados.pedidoAtual || mesaDados.items || mesaDados.itens || [];
+      const itensSeguros = pedidoDaMesa.items
+        .map((item) => `${item.quantity}x ${item.menuItem.name}`)
+        .join(', ');
 
       //  AMARELO: Pedido Criado ('pending')
-      if (orderStatusFormatted === 'pending' && mesa.status !== ('aguardando' as any)) {
-        // Usando o status existente do seu tipo (ex: 'aguardando') mapeado para a cor amarela
-        atualizarMesaStatus(mesa.id, 'aguardando' as any, mesa.cliente, itensSeguros);
+      if (orderStatusFormatted === 'pending' && mesa.status !== 'aguardando') {
+        atualizarMesaStatus(mesa.id, {
+          status: 'aguardando',
+          cliente: mesa.cliente || pedidoDaMesa.customerName,
+          pedidoAtual: itensSeguros,
+          pedidoId: pedidoDaMesa.id,
+          pessoas: mesa.pessoas,
+        });
       }
 
       // LARANJA: Pedido Fazendo / Em Preparação ('preparing')
-      else if (orderStatusFormatted === 'preparing' && mesa.status !== ('preparando' as any)) {
-        atualizarMesaStatus(mesa.id, 'preparando' as any, mesa.cliente, itensSeguros);
+      else if (orderStatusFormatted === 'preparing' && mesa.status !== 'preparando') {
+        atualizarMesaStatus(mesa.id, {
+          status: 'preparando',
+          cliente: mesa.cliente || pedidoDaMesa.customerName,
+          pedidoAtual: itensSeguros,
+          pedidoId: pedidoDaMesa.id,
+          pessoas: mesa.pessoas,
+        });
       }
 
       //  AZUL: Pedido Feito / Pronto para Entrega ('ready')
-      else if (orderStatusFormatted === 'ready' && mesa.status !== ('pronto' as any)) {
-        atualizarMesaStatus(mesa.id, 'pronto' as any, mesa.cliente, itensSeguros);
+      else if (orderStatusFormatted === 'ready' && mesa.status !== 'pronto') {
+        atualizarMesaStatus(mesa.id, {
+          status: 'pronto',
+          cliente: mesa.cliente || pedidoDaMesa.customerName,
+          pedidoAtual: itensSeguros,
+          pedidoId: pedidoDaMesa.id,
+          pessoas: mesa.pessoas,
+        });
       }
 
       // VERDE: Cliente levou / Consumindo ('delivered')
       else if (orderStatusFormatted === 'delivered' && mesa.status !== 'atendido') {
-        atualizarMesaStatus(mesa.id, 'atendido', mesa.cliente, itensSeguros);
+        atualizarMesaStatus(mesa.id, {
+          status: 'atendido',
+          cliente: mesa.cliente || pedidoDaMesa.customerName,
+          pedidoAtual: itensSeguros,
+          pedidoId: pedidoDaMesa.id,
+          pessoas: mesa.pessoas,
+        });
       }
     });
   }, [orders, mesas]);
-
-  // Função auxiliar para renderizar a cor correta dos cards na tela baseado na etapa
-  const getCorStatusMesa = (status: string) => {
-    const statusLimpo = String(status).toLowerCase();
-    switch (statusLimpo) {
-      case 'vaga':
-        return '#7F8C8D'; // Cinza: Mesa vazia
-      case 'aguardando':
-        return '#fdd73d'; // Amarelo: Pedido criado
-      case 'preparando':
-        return '#b15703'; // Laranja: Em preparação
-      case 'pronto':
-        return '#3498DB'; // Azul: Pronto para entrega
-      case 'atendido':
-        return '#2ECC71'; // Verde: Consumindo / Entregue
-      default:
-        return '#7F8C8D'; // Fallback seguro (Cinza)
-    }
-  };
 
   const handleRemoveItem = (id: string) => {
     console.log(' handleRemoveItem chamado com ID:', id);
@@ -119,8 +126,6 @@ export default function RestaurantScreen() {
     console.log('DELETE CANCELADO');
     setShowDeleteConfirm(false);
   };
-
-  const pendingOrders = orders.filter((order) => order.status === 'pending');
 
   return (
     <View style={styles.container}>
