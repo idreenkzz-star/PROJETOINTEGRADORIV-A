@@ -23,6 +23,25 @@ interface MenuContextType {
   reload: () => Promise<void>;
 }
 
+export function calcularTotalPedido(items: OrderItem[]) {
+  return items.reduce((sum, item) => sum + item.menuItem.price * item.quantity, 0);
+}
+
+export function criarPedido(
+  items: OrderItem[],
+  customerName: string,
+  orderId: string = String(uuid.v4())
+): Order {
+  return {
+    id: orderId,
+    items,
+    total: calcularTotalPedido(items),
+    status: 'pending',
+    customerName,
+    createdAt: new Date(),
+  };
+}
+
 // Criação do contexto
 const MenuContext = createContext<MenuContextType | undefined>(undefined);
 
@@ -114,23 +133,10 @@ const removeMenuItem = (id: string) => {
 
   // Criar pedido
   const addOrder = (items: OrderItem[], customerName: string) => {
-    const total = items.reduce(
-      (sum, i) => sum + i.menuItem.price * i.quantity,
-      0
-    );
-
-    const orderId = String(uuid.v4());
-    const newOrder: Order = {
-      id: orderId,
-      items,
-      total,
-      status: "pending",
-      customerName,
-      createdAt: new Date(),
-    };
+    const newOrder = criarPedido(items, customerName);
 
     setOrders((prev) => [newOrder, ...prev]);
-    return orderId;
+    return newOrder.id;
   };
 
   // Atualizar status de pedido

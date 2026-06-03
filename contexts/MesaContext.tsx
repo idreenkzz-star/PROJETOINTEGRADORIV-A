@@ -21,7 +21,7 @@ export interface MesaUpdate {
   pessoas?: number;
 }
 
-function criarMesasPadrao() {
+export function criarMesasPadrao() {
   return Array.from({ length: 12 }, (_, index) => {
     const numero = String(index + 1).padStart(2, '0');
 
@@ -31,6 +31,28 @@ function criarMesasPadrao() {
       status: 'vaga' as MesaStatus,
     };
   });
+}
+
+export function aplicarAtualizacaoMesa(mesa: Mesa, updates: MesaUpdate): Mesa {
+  if (updates.status === 'vaga') {
+    return {
+      ...mesa,
+      status: 'vaga',
+      cliente: undefined,
+      pedidoAtual: undefined,
+      pedidoId: undefined,
+      pessoas: undefined,
+    };
+  }
+
+  return {
+    ...mesa,
+    status: updates.status,
+    cliente: updates.cliente ?? mesa.cliente,
+    pedidoAtual: updates.pedidoAtual ?? mesa.pedidoAtual,
+    pedidoId: updates.pedidoId ?? mesa.pedidoId,
+    pessoas: updates.pessoas ?? mesa.pessoas,
+  };
 }
 
 // Definição de tudo que o contexto vai exportar para as telas usarem
@@ -65,31 +87,7 @@ export function MesaProvider({ children }: { children: ReactNode }) {
   // Função que a aba Order vai disparar para mudar a cor da mesa
   const atualizarMesaStatus = (id: string, updates: MesaUpdate) => {
     setMesas((prev) =>
-      prev.map((mesa) => {
-        if (mesa.id !== id) {
-          return mesa;
-        }
-
-        if (updates.status === 'vaga') {
-          return {
-            ...mesa,
-            status: 'vaga',
-            cliente: undefined,
-            pedidoAtual: undefined,
-            pedidoId: undefined,
-            pessoas: undefined,
-          };
-        }
-
-        return {
-          ...mesa,
-          status: updates.status,
-          cliente: updates.cliente ?? mesa.cliente,
-          pedidoAtual: updates.pedidoAtual ?? mesa.pedidoAtual,
-          pedidoId: updates.pedidoId ?? mesa.pedidoId,
-          pessoas: updates.pessoas ?? mesa.pessoas,
-        };
-      })
+      prev.map((mesa) => (mesa.id === id ? aplicarAtualizacaoMesa(mesa, updates) : mesa))
     );
   };
 
